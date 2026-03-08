@@ -16,8 +16,17 @@ BASE_IP="172.20.0"      # Workers get .21, .22, .23, .24, .25
 PID_FILE="/tmp/autoscale.pid"
 LOG_FILE="/tmp/autoscale.log"
 
+SCALE_DOWN_WAIT=4       # Number of consecutive checks with low usage before scaling down (4 * 30s = 2 min)
+STABILIZATION_COUNT=0   # Counter for scale down stabilization
+
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
+}
+
+sync_clock() {
+  local name=$1
+  log "Syncing clock on $name..."
+  docker exec "$name" date -s "$(date '+%Y-%m-%d %H:%M:%S')" > /dev/null 2>&1
 }
 
 get_worker_nodes() {
@@ -216,6 +225,8 @@ scale_up() {
     sleep 5
   done
 
+  sync_clock "$name"
+  STABILIZATION_COUNT=0 # Reset stabilization after any scale-up
   log "SUCCESS: $name is Ready! Workers: $((current + 1))/$MAX_WORKERS"
 }
 
@@ -251,6 +262,7 @@ scale_down() {
   # Remove volumes
   docker volume rm "wrk${last_num}-kubernetes" "wrk${last_num}-kubelet" "wrk${last_num}-containerd" "wrk${last_num}-cni" > /dev/null 2>&1
 
+  STABILIZATION_COUNT=0 # Reset after scale-down
   log "SUCCESS: $name removed. Workers: $((current - 1))/$MAX_WORKERS"
 }
 
@@ -258,6 +270,7 @@ show_status() {
   echo "=== Autoscaler Status ==="
   echo "Workers: $(get_worker_count)/$MAX_WORKERS (min: $MIN_WORKERS)"
   echo "Pending pods: $(has_pending_pods)"
+  echo "Scale-down stabilization: ${STABILIZATION_COUNT}/${SCALE_DOWN_WAIT}"
 
   local usage
   usage=$(get_resource_usage)
@@ -284,6 +297,7 @@ show_status() {
 daemon_loop() {
   log "Autoscaler daemon started (interval: ${CHECK_INTERVAL}s)"
   log "Config: workers $MIN_WORKERS-$MAX_WORKERS, CPU threshold ${CPU_THRESHOLD}%/${SCALE_DOWN_CPU}%, MEM threshold ${MEM_THRESHOLD}%/${SCALE_DOWN_MEM}%"
+  log "Scale-down wait: $((SCALE_DOWN_WAIT * CHECK_INTERVAL))s"
 
   while true; do
     local pending current usage cpu_pct mem_pct
@@ -296,18 +310,28 @@ daemon_loop() {
     # Scale up: pending pods OR high resource usage
     if [ "$pending" -gt 0 ] && [ "$current" -lt "$MAX_WORKERS" ]; then
       log "Trigger: $pending pending pods detected"
+      STABILIZATION_COUNT=0
       scale_up
     elif [ "$cpu_pct" -gt "$CPU_THRESHOLD" ] || [ "$mem_pct" -gt "$MEM_THRESHOLD" ]; then
       if [ "$current" -lt "$MAX_WORKERS" ]; then
         log "Trigger: Resource pressure CPU=${cpu_pct}% MEM=${mem_pct}%"
+        STABILIZATION_COUNT=0
         scale_up
       fi
-    # Scale down: low resource usage and no pending pods
+    # Scale down candidate: low resource usage and no pending pods
     elif [ "$cpu_pct" -lt "$SCALE_DOWN_CPU" ] && [ "$mem_pct" -lt "$SCALE_DOWN_MEM" ] && [ "$pending" -eq 0 ]; then
       if [ "$current" -gt "$MIN_WORKERS" ]; then
-        log "Trigger: Low usage CPU=${cpu_pct}% MEM=${mem_pct}%"
-        scale_down
+        STABILIZATION_COUNT=$((STABILIZATION_COUNT + 1))
+        if [ "$STABILIZATION_COUNT" -ge "$SCALE_DOWN_WAIT" ]; then
+          log "Trigger: Low usage sustained for 2 minutes. CPU=${cpu_pct}% MEM=${mem_pct}%"
+          scale_down
+        else
+          log "Waiting for stabilization: ${STABILIZATION_COUNT}/${SCALE_DOWN_WAIT} (CPU=${cpu_pct}%, MEM=${mem_pct}%)"
+        fi
       fi
+    else
+      # Reset stabilization if conditions are neither scale-up nor scale-down
+      STABILIZATION_COUNT=0
     fi
 
     sleep "$CHECK_INTERVAL"
