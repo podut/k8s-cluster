@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-provisioning
+  namespace: monitoring
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-cluster
+  namespace: monitoring
+data:
+  cluster-overview.json: |
+    {
+      "title": "Cluster & Autoscaling Overview",
+      "uid": "cluster-autoscaling",
+      "panels": [
+        {
+          "title": "Nodes Status (Ready)",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+          "targets": [{ "expr": "sum(kube_node_status_condition{condition='Ready',status='true'})" }]
+        },
+        {
+          "title": "Total Pods Running",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+          "targets": [{ "expr": "sum(kube_pod_status_phase{phase='Running'})" }]
+        },
+        {
+          "title": "CPU Usage per Node (%)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+          "targets": [{ "expr": "sum(rate(node_cpu_seconds_total{mode!='idle'}[5m])) by (node) / sum(machine_cpu_cores) by (node) * 100" }]
+        },
+        {
+          "title": "Memory Usage per Node (%)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+          "targets": [{ "expr": "sum(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) by (node) / sum(node_memory_MemTotal_bytes) by (node) * 100" }]
+        }
+      ]
+    }
