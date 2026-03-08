@@ -46,10 +46,22 @@ data:
           "targets": [{ "expr": "sum(rate(node_cpu_seconds_total{mode!='idle'}[5m])) by (node) / sum(machine_cpu_cores) by (node) * 100" }]
         },
         {
-          "title": "Memory Usage per Node (%)",
+          "title": "Memory Usage per Node (GiB)",
           "type": "timeseries",
           "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
-          "targets": [{ "expr": "sum(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) by (node) / sum(node_memory_MemTotal_bytes) by (node) * 100" }]
+          "targets": [{ "expr": "sum(container_memory_usage_bytes{container='', pod=''}) by (node) / 1024 / 1024 / 1024" }]
+        },
+        {
+          "title": "Network Traffic (Download) - KiB/s",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+          "targets": [{ "expr": "sum(irate(container_network_receive_bytes_total{id='/'}[5m])) by (node) / 1024" }]
+        },
+        {
+          "title": "Network Traffic (Upload) - KiB/s",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+          "targets": [{ "expr": "sum(irate(container_network_transmit_bytes_total{id='/'}[5m])) by (node) / 1024" }]
         }
       ]
     }
