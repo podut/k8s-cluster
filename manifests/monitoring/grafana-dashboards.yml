@@ -65,3 +65,48 @@ data:
         }
       ]
     }
+  site-billing.json: |
+    {
+      "title": "Site Billing & Resources",
+      "uid": "site-billing",
+      "templating": {
+        "list": [
+          {
+            "name": "namespace",
+            "type": "query",
+            "query": "label_values(kube_namespace_labels, namespace)",
+            "refresh": 1,
+            "regex": "/wp-site.*/"
+          }
+        ]
+      },
+      "panels": [
+        {
+          "title": "Current CPU Usage (Cores)",
+          "type": "gauge",
+          "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+          "targets": [{ "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace'}[5m]))" }]
+        },
+        {
+          "title": "Current Memory (MiB)",
+          "type": "gauge",
+          "gridPos": { "h": 6, "w": 8, "x": 8, "y": 0 },
+          "targets": [{ "expr": "sum(container_memory_usage_bytes{namespace='$namespace'}) / 1024 / 1024" }]
+        },
+        {
+          "title": "Total Network Traffic (MB)",
+          "type": "stat",
+          "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
+          "targets": [{ "expr": "sum(container_network_receive_bytes_total{namespace='$namespace'} + container_network_transmit_bytes_total{namespace='$namespace'}) / 1024 / 1024" }]
+        },
+        {
+          "title": "Resource Usage Over Time",
+          "type": "timeseries",
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 6 },
+          "targets": [
+            { "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace'}[5m]))", "legendFormat": "CPU Cores" },
+            { "expr": "sum(container_memory_usage_bytes{namespace='$namespace'}) / 1024 / 1024 / 1024", "legendFormat": "RAM GiB" }
+          ]
+        }
+      ]
+    }
