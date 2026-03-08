@@ -6,9 +6,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: http://gitea.gitea.svc:3000/argocd/k8s-apps.git
+    repoURL: https://github.com/podut/k8s-cluster.git
     targetRevision: main
-    path: sites/site2
+    path: manifests/sites/site2
   destination:
     server: https://kubernetes.default.svc
     namespace: wp-site2
