@@ -42,6 +42,15 @@ spec:
     spec:
       securityContext:
         runAsUser: 0
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
       containers:
         - name: grafana
           image: grafana/grafana:10.3.1
