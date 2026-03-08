@@ -22,52 +22,84 @@ metadata:
   name: grafana-dashboard-cluster
   namespace: monitoring
 data:
-  cluster-overview.json: |
+  # DASHBOARD 1: General Cluster Infrastructure
+  cluster-infrastructure.json: |
     {
-      "title": "Cluster & Autoscaling Overview",
-      "uid": "cluster-autoscaling",
+      "title": "1. Cluster Infrastructure",
+      "uid": "cluster-infra",
       "panels": [
         {
-          "title": "Nodes Status (Ready)",
+          "title": "Nodes Ready",
           "type": "stat",
-          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+          "gridPos": { "h": 4, "w": 12, "x": 0, "y": 0 },
           "targets": [{ "expr": "sum(kube_node_status_condition{condition='Ready',status='true'})" }]
         },
         {
           "title": "Total Pods Running",
           "type": "stat",
-          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+          "gridPos": { "h": 4, "w": 12, "x": 12, "y": 0 },
           "targets": [{ "expr": "sum(kube_pod_status_phase{phase='Running'})" }]
-        },
-        {
-          "title": "CPU Usage per Node (Cores)",
-          "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
-          "targets": [{ "expr": "sum(rate(container_cpu_usage_seconds_total{id='/'}[5m])) by (node)" }]
-        },
-        {
-          "title": "Memory Usage per Node (GiB)",
-          "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
-          "targets": [{ "expr": "sum(container_memory_usage_bytes{id='/'}) by (node) / 1024 / 1024 / 1024" }]
         },
         {
           "title": "Network Traffic (Download) - KiB/s",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
           "targets": [{ "expr": "sum(irate(container_network_receive_bytes_total{id='/'}[5m])) by (node) / 1024" }]
         },
         {
           "title": "Network Traffic (Upload) - KiB/s",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
           "targets": [{ "expr": "sum(irate(container_network_transmit_bytes_total{id='/'}[5m])) by (node) / 1024" }]
         }
       ]
     }
+
+  # DASHBOARD 2: Autoscaling Performance
+  autoscaling-overview.json: |
+    {
+      "title": "2. Autoscaling Performance",
+      "uid": "autoscaling-perf",
+      "panels": [
+        {
+          "title": "Current Worker Count",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 12, "x": 0, "y": 0 },
+          "targets": [{ "expr": "sum(kube_node_info{node=~'worker-.*'})" }]
+        },
+        {
+          "title": "Pending Pods (Scaling Trigger)",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 12, "x": 12, "y": 0 },
+          "targets": [{ "expr": "sum(kube_pod_status_phase{phase='Pending'})" }]
+        },
+        {
+          "title": "CPU Requests vs Allocatable (%)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+          "targets": [
+            { "expr": "sum(kube_pod_container_resource_requests{resource='cpu'}) by (node) / sum(kube_node_status_allocatable{resource='cpu'}) by (node) * 100", "legendFormat": "Usage {{node}}" },
+            { "expr": "80", "legendFormat": "Scale Up Threshold (80%)" },
+            { "expr": "30", "legendFormat": "Scale Down Threshold (30%)" }
+          ]
+        },
+        {
+          "title": "Memory Requests vs Allocatable (%)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+          "targets": [
+            { "expr": "sum(kube_pod_container_resource_requests{resource='memory'}) by (node) / sum(kube_node_status_allocatable{resource='memory'}) by (node) * 100", "legendFormat": "Usage {{node}}" },
+            { "expr": "80", "legendFormat": "Scale Up Threshold (80%)" },
+            { "expr": "30", "legendFormat": "Scale Down Threshold (30%)" }
+          ]
+        }
+      ]
+    }
+
+  # DASHBOARD 3: Site Billing
   site-billing.json: |
     {
-      "title": "Site Billing & Resources",
+      "title": "3. Site Billing & Resources",
       "uid": "site-billing",
       "templating": {
         "list": [
@@ -98,15 +130,6 @@ data:
           "type": "stat",
           "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
           "targets": [{ "expr": "sum(container_network_receive_bytes_total{namespace='$namespace'} + container_network_transmit_bytes_total{namespace='$namespace'}) / 1024 / 1024" }]
-        },
-        {
-          "title": "Resource Usage Over Time",
-          "type": "timeseries",
-          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 6 },
-          "targets": [
-            { "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace'}[5m]))", "legendFormat": "CPU Cores" },
-            { "expr": "sum(container_memory_usage_bytes{namespace='$namespace'}) / 1024 / 1024 / 1024", "legendFormat": "RAM GiB" }
-          ]
         }
       ]
     }
