@@ -40,16 +40,16 @@ data:
           "targets": [{ "expr": "sum(kube_pod_status_phase{phase='Running'})" }]
         },
         {
-          "title": "CPU Usage per Node (%)",
+          "title": "CPU Usage per Node (Cores)",
           "type": "timeseries",
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
-          "targets": [{ "expr": "sum(rate(node_cpu_seconds_total{mode!='idle'}[5m])) by (node) / sum(machine_cpu_cores) by (node) * 100" }]
+          "targets": [{ "expr": "sum(rate(container_cpu_usage_seconds_total{id='/'}[5m])) by (node)" }]
         },
         {
           "title": "Memory Usage per Node (GiB)",
           "type": "timeseries",
           "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
-          "targets": [{ "expr": "sum(container_memory_usage_bytes{container='', pod=''}) by (node) / 1024 / 1024 / 1024" }]
+          "targets": [{ "expr": "sum(container_memory_usage_bytes{id='/'}) by (node) / 1024 / 1024 / 1024" }]
         },
         {
           "title": "Network Traffic (Download) - KiB/s",
