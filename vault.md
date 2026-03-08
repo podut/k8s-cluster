@@ -11,9 +11,16 @@ Acest document descrie integrarea Vault pentru gestionarea centralizată a secre
 
 ## Acces și Autentificare
 
-Pentru testare și configurare în modul `dev`, s-au folosit următoarele date:
-- **Root Token:** `root`
-- **Metodă de stocare:** KV (Key-Value) Version 2 sub path-ul `secret/`
+Acesta rulează în mod **Persistent** (File Storage). Dacă clusterul se restartează, seiful trebuie descuiat manual.
+
+- **Unseal Key:** `[SCRIE_AICI_CHEIA_GENERATA]`
+- **Root Token:** `[SCRIE_AICI_TOKENUL_GENERAT]`
+
+### Procedura de restart (Unseal)
+Dacă interfața web arată "Sealed", rulează:
+```bash
+kubectl exec -n vault vault-0 -- vault operator unseal e3a73c51e6e1167e66b119b935a6e118a387f000e338dc6cd57d33ea24df34b7
+```
 
 ### Acces din linia de comandă (Host)
 ```powershell
