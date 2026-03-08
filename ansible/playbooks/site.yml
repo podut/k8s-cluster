@@ -1,0 +1,6 @@
+---
+# Master playbook - runs all steps in order
+- import_playbook: 01-prepare-nodes.yml
+- import_playbook: 02-install-containerd.yml
+- import_playbook: 03-install-k8s.yml
+- import_playbook: 04-init-cluster.yml

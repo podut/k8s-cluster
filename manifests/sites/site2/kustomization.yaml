@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: wp-site2
+
+resources:
+  - ../../wordpress-base
+
+patches:
+  - target:
+      kind: Secret
+      name: wp-secrets
+    patch: |
+      - op: replace
+        path: /stringData/MYSQL_ROOT_PASSWORD
+        value: site2root456
+      - op: replace
+        path: /stringData/MYSQL_PASSWORD
+        value: site2pass456
+      - op: replace
+        path: /stringData/WORDPRESS_DB_PASSWORD
+        value: site2pass456
+  - target:
+      kind: Ingress
+      name: wordpress-ingress
+    patch: |
+      - op: replace
+        path: /spec/rules/0/host
+        value: site2.local
+  - target:
+      kind: Ingress
+      name: phpmyadmin-ingress
+    patch: |
+      - op: replace
+        path: /spec/rules/0/host
+        value: pma-site2.local

@@ -1,0 +1,11 @@
+---
+- name: Test connectivity to all nodes
+  hosts: k8s_cluster
+  gather_facts: yes
+  tasks:
+    - name: Ping all nodes
+      ansible.builtin.ping:
+
+    - name: Print hostname
+      ansible.builtin.debug:
+        msg: "Connected to {{ inventory_hostname }} ({{ ansible_hostname }})"

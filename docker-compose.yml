@@ -1,0 +1,159 @@
+services:
+  # --- Control Plane Nodes ---
+  controller-1:
+    image: k8s-cluster/controller-1:v1
+    container_name: controller-1
+    hostname: controller-1
+    privileged: true
+    mem_limit: 4g
+    cpus: 0.5
+    ports:
+      - "6443:6443"
+    networks:
+      k8s-net:
+        ipv4_address: 172.20.0.11
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - ctrl1-kubernetes:/etc/kubernetes
+      - ctrl1-etcd:/var/lib/etcd
+      - ctrl1-kubelet:/var/lib/kubelet
+      - ctrl1-containerd:/var/lib/containerd
+      - ctrl1-cni:/etc/cni
+    tmpfs:
+      - /run
+      - /run/lock
+
+  controller-2:
+    image: k8s-cluster/controller-2:v1
+    container_name: controller-2
+    hostname: controller-2
+    privileged: true
+    mem_limit: 4g
+    cpus: 0.5
+    networks:
+      k8s-net:
+        ipv4_address: 172.20.0.12
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - ctrl2-kubernetes:/etc/kubernetes
+      - ctrl2-etcd:/var/lib/etcd
+      - ctrl2-kubelet:/var/lib/kubelet
+      - ctrl2-containerd:/var/lib/containerd
+      - ctrl2-cni:/etc/cni
+    tmpfs:
+      - /run
+      - /run/lock
+
+  controller-3:
+    image: k8s-cluster/controller-3:v1
+    container_name: controller-3
+    hostname: controller-3
+    privileged: true
+    mem_limit: 4g
+    cpus: 0.5
+    networks:
+      k8s-net:
+        ipv4_address: 172.20.0.13
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - ctrl3-kubernetes:/etc/kubernetes
+      - ctrl3-etcd:/var/lib/etcd
+      - ctrl3-kubelet:/var/lib/kubelet
+      - ctrl3-containerd:/var/lib/containerd
+      - ctrl3-cni:/etc/cni
+    tmpfs:
+      - /run
+      - /run/lock
+
+  # --- Worker Nodes ---
+  worker-1:
+    image: k8s-cluster/worker-1:v1
+    container_name: worker-1
+    hostname: worker-1
+    privileged: true
+    mem_limit: 4g
+    cpus: 0.5
+    networks:
+      k8s-net:
+        ipv4_address: 172.20.0.21
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - wrk1-kubernetes:/etc/kubernetes
+      - wrk1-kubelet:/var/lib/kubelet
+      - wrk1-containerd:/var/lib/containerd
+      - wrk1-cni:/etc/cni
+    tmpfs:
+      - /run
+      - /run/lock
+
+  worker-2:
+    image: k8s-cluster/worker-2:v1
+    container_name: worker-2
+    hostname: worker-2
+    privileged: true
+    mem_limit: 4g
+    cpus: 0.5
+    networks:
+      k8s-net:
+        ipv4_address: 172.20.0.22
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - wrk2-kubernetes:/etc/kubernetes
+      - wrk2-kubelet:/var/lib/kubelet
+      - wrk2-containerd:/var/lib/containerd
+      - wrk2-cni:/etc/cni
+    tmpfs:
+      - /run
+      - /run/lock
+
+  # --- Ansible Control Node ---
+  ansible:
+    image: k8s-cluster/ansible:v1
+    container_name: ansible
+    hostname: ansible
+    mem_limit: 4g
+    cpus: 0.25
+    networks:
+      k8s-net:
+        ipv4_address: 172.20.0.100
+    volumes:
+      - ./ansible/playbooks:/ansible
+    depends_on:
+      - controller-1
+      - controller-2
+      - controller-3
+      - worker-1
+      - worker-2
+
+volumes:
+  ctrl1-kubernetes:
+  ctrl1-etcd:
+  ctrl1-kubelet:
+  ctrl1-containerd:
+  ctrl1-cni:
+  ctrl2-kubernetes:
+  ctrl2-etcd:
+  ctrl2-kubelet:
+  ctrl2-containerd:
+  ctrl2-cni:
+  ctrl3-kubernetes:
+  ctrl3-etcd:
+  ctrl3-kubelet:
+  ctrl3-containerd:
+  ctrl3-cni:
+  wrk1-kubernetes:
+  wrk1-kubelet:
+  wrk1-containerd:
+  wrk1-cni:
+  wrk2-kubernetes:
+  wrk2-kubelet:
+  wrk2-containerd:
+  wrk2-cni:
+
+networks:
+  k8s-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+          gateway: 172.20.0.1

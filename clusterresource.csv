@@ -1,0 +1,42 @@
+Category,Name,Namespace,Type,Details,URL,Username,Password
+Node,controller-1,-,control-plane,172.20.0.11 / 4GB RAM / 0.5 CPU,-,-,-
+Node,controller-2,-,control-plane,172.20.0.12 / 4GB RAM / 0.5 CPU,-,-,-
+Node,controller-3,-,control-plane,172.20.0.13 / 4GB RAM / 0.5 CPU,-,-,-
+Node,worker-1,-,worker,172.20.0.21 / 4GB RAM / 0.5 CPU,-,-,-
+Node,worker-2,-,worker,172.20.0.22 / 4GB RAM / 0.5 CPU,-,-,-
+Node,ansible,-,provisioning,172.20.0.100 / 512MB RAM / 0.25 CPU,-,-,-
+Service,ArgoCD,argocd,GitOps,Automated sync + prune + self-heal,http://localhost:8080,admin,wQouQbcfprzuWFUR
+Service,Grafana,monitoring,Monitoring Dashboard,2 dashboards: Cluster Overview + Pod Resources,http://localhost:3000,admin,admin123
+Service,Prometheus,monitoring,Metrics Collector,cadvisor + kube-state-metrics + node metrics,http://localhost:9090,-,-
+Service,Gitea,gitea,Git Server,Repo: k8s-apps.git,http://gitea.gitea.svc:3000,argocd,argocd123
+Service,MetalLB,metallb-system,Load Balancer,L2 mode / IP pool: 172.20.0.200-250,-,-,-
+Service,Nginx Ingress,ingress-nginx,Ingress Controller,External IP: 172.20.0.200,-,-,-
+WordPress Site,WordPress Site1,wp-site1,WordPress 6 PHP 8.2,Ingress: site1.local,http://localhost:8081,-,-
+WordPress Site,MariaDB Site1,wp-site1,MariaDB 10.11,PVC: mariadb-data 2Gi,-,root,site1root123
+WordPress Site,MariaDB Site1,wp-site1,MariaDB 10.11,DB user: wordpress,-,wordpress,site1pass123
+WordPress Site,Redis Site1,wp-site1,Redis 7 Alpine,maxmemory 64MB,-,-,-
+WordPress Site,phpMyAdmin Site1,wp-site1,phpMyAdmin 5,Ingress: pma-site1.local,http://localhost:8181,-,-
+WordPress Site,WordPress Site2,wp-site2,WordPress 6 PHP 8.2,Ingress: site2.local,http://localhost:8082,-,-
+WordPress Site,MariaDB Site2,wp-site2,MariaDB 10.11,PVC: mariadb-data 2Gi,-,root,site2root456
+WordPress Site,MariaDB Site2,wp-site2,MariaDB 10.11,DB user: wordpress,-,wordpress,site2pass456
+WordPress Site,Redis Site2,wp-site2,Redis 7 Alpine,maxmemory 64MB,-,-,-
+WordPress Site,phpMyAdmin Site2,wp-site2,phpMyAdmin 5,Ingress: pma-site2.local,http://localhost:8182,-,-
+Ingress Rule,site1.local,wp-site1,Nginx,wordpress:80 / 50 rps / 20 max conn / 64MB upload,http://172.20.0.200 (Host: site1.local),-,-
+Ingress Rule,pma-site1.local,wp-site1,Nginx,phpmyadmin:80 / 10 rps,http://172.20.0.200 (Host: pma-site1.local),-,-
+Ingress Rule,site2.local,wp-site2,Nginx,wordpress:80 / 50 rps / 20 max conn / 64MB upload,http://172.20.0.200 (Host: site2.local),-,-
+Ingress Rule,pma-site2.local,wp-site2,Nginx,phpmyadmin:80 / 10 rps,http://172.20.0.200 (Host: pma-site2.local),-,-
+Resource Limit,ResourceQuota,wp-site1,Quota,CPU: 2 req / 4 lim | Mem: 2Gi req / 4Gi lim | 10 pods / 5 PVCs,-,-,-
+Resource Limit,ResourceQuota,wp-site2,Quota,CPU: 2 req / 4 lim | Mem: 2Gi req / 4Gi lim | 10 pods / 5 PVCs,-,-,-
+Resource Limit,LimitRange,wp-site1,Range,Default: 500m/512Mi | Request: 100m/128Mi | Max: 2CPU/2Gi,-,-,-
+Resource Limit,LimitRange,wp-site2,Range,Default: 500m/512Mi | Request: 100m/128Mi | Max: 2CPU/2Gi,-,-,-
+Bandwidth,WordPress,wp-site1,Annotation,Ingress: 50Mbps / Egress: 50Mbps,-,-,-
+Bandwidth,MariaDB,wp-site1,Annotation,Ingress: 20Mbps / Egress: 20Mbps,-,-,-
+Bandwidth,WordPress,wp-site2,Annotation,Ingress: 50Mbps / Egress: 50Mbps,-,-,-
+Bandwidth,MariaDB,wp-site2,Annotation,Ingress: 20Mbps / Egress: 20Mbps,-,-,-
+Port Forward,ArgoCD,argocd,svc/argocd-server,443 -> 8080,http://localhost:8080,admin,wQouQbcfprzuWFUR
+Port Forward,Grafana,monitoring,svc/grafana,3000 -> 3000,http://localhost:3000,admin,admin123
+Port Forward,Prometheus,monitoring,svc/prometheus,9090 -> 9090,http://localhost:9090,-,-
+Port Forward,WordPress Site1,wp-site1,svc/wordpress,80 -> 8081,http://localhost:8081,-,-
+Port Forward,phpMyAdmin Site1,wp-site1,svc/phpmyadmin,80 -> 8181,http://localhost:8181,-,-
+Port Forward,WordPress Site2,wp-site2,svc/wordpress,80 -> 8082,http://localhost:8082,-,-
+Port Forward,phpMyAdmin Site2,wp-site2,svc/phpmyadmin,80 -> 8182,http://localhost:8182,-,-

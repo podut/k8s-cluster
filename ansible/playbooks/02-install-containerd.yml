@@ -1,0 +1,37 @@
+---
+- name: Install containerd on all nodes
+  hosts: k8s_cluster
+  gather_facts: yes
+  tasks:
+    - name: Install containerd
+      apt:
+        name: containerd
+        state: present
+        update_cache: yes
+
+    - name: Create containerd config directory
+      file:
+        path: /etc/containerd
+        state: directory
+
+    - name: Generate default containerd config
+      shell: containerd config default > /etc/containerd/config.toml
+
+    - name: Enable SystemdCgroup in containerd config
+      replace:
+        path: /etc/containerd/config.toml
+        regexp: 'SystemdCgroup = false'
+        replace: 'SystemdCgroup = true'
+
+    - name: Switch to native snapshotter (required for Docker-in-Docker)
+      replace:
+        path: /etc/containerd/config.toml
+        regexp: 'snapshotter = "overlayfs"'
+        replace: 'snapshotter = "native"'
+
+    - name: Restart containerd
+      systemd:
+        name: containerd
+        state: restarted
+        enabled: yes
+        daemon_reload: yes

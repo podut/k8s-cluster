@@ -1,0 +1,42 @@
+---
+- name: Install kubeadm, kubelet, kubectl on all nodes
+  hosts: k8s_cluster
+  gather_facts: yes
+  tasks:
+    - name: Create keyrings directory
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Add Kubernetes GPG key
+      shell: |
+        curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg --yes
+      args:
+        creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+    - name: Add Kubernetes apt repo
+      copy:
+        content: 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /'
+        dest: /etc/apt/sources.list.d/kubernetes.list
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install kubeadm, kubelet, kubectl
+      apt:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: present
+
+    - name: Hold k8s packages
+      shell: apt-mark hold kubelet kubeadm kubectl
+
+    - name: Enable kubelet service
+      systemd:
+        name: kubelet
+        enabled: yes
+        daemon_reload: yes

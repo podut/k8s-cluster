@@ -1,0 +1,123 @@
+---
+- name: Initialize K8s cluster on first controller
+  hosts: controller-1
+  gather_facts: yes
+  tasks:
+    - name: Check if cluster is already initialized
+      stat:
+        path: /etc/kubernetes/admin.conf
+      register: kubeadm_init
+
+    - name: Initialize the cluster with kubeadm
+      shell: |
+        kubeadm init \
+          --control-plane-endpoint=172.20.0.11:6443 \
+          --pod-network-cidr=10.244.0.0/16 \
+          --apiserver-advertise-address=172.20.0.11 \
+          --apiserver-cert-extra-sans=127.0.0.1,localhost \
+          --upload-certs \
+          --ignore-preflight-errors=all
+      register: kubeadm_output
+      when: not kubeadm_init.stat.exists
+
+    - name: Save kubeadm init output
+      copy:
+        content: "{{ kubeadm_output.stdout }}"
+        dest: /root/kubeadm-init.log
+      when: kubeadm_output is changed
+
+    - name: Setup kubeconfig for root
+      shell: |
+        mkdir -p /root/.kube
+        cp /etc/kubernetes/admin.conf /root/.kube/config
+        chown root:root /root/.kube/config
+      when: kubeadm_output is changed
+
+    - name: Install Flannel CNI
+      shell: kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+
+    - name: Generate certificate key
+      shell: kubeadm init phase upload-certs --upload-certs 2>/dev/null | tail -1
+      register: cert_key
+
+    - name: Generate controller join command
+      shell: "kubeadm token create --print-join-command --certificate-key {{ cert_key.stdout }}"
+      register: controller_join_command
+
+    - name: Generate worker join command
+      shell: kubeadm token create --print-join-command
+      register: worker_join_command
+
+    - name: Save controller join command
+      copy:
+        content: "{{ controller_join_command.stdout }}"
+        dest: /root/controller-join.sh
+        mode: '0755'
+
+    - name: Save worker join command
+      copy:
+        content: "{{ worker_join_command.stdout }}"
+        dest: /root/worker-join.sh
+        mode: '0755'
+
+    - name: Set join commands as facts
+      set_fact:
+        controller_join_cmd: "{{ controller_join_command.stdout }}"
+        worker_join_cmd: "{{ worker_join_command.stdout }}"
+
+- name: Join other controllers to cluster
+  hosts: controller-2,controller-3
+  gather_facts: no
+  tasks:
+    - name: Check if already joined
+      stat:
+        path: /etc/kubernetes/kubelet.conf
+      register: kubelet_conf
+
+    - name: Join as control plane node
+      shell: "{{ hostvars['controller-1']['controller_join_cmd'] }} --ignore-preflight-errors=all"
+      when: not kubelet_conf.stat.exists
+
+    - name: Setup kubeconfig
+      shell: |
+        mkdir -p /root/.kube
+        cp /etc/kubernetes/admin.conf /root/.kube/config
+      when: not kubelet_conf.stat.exists
+
+- name: Join workers to cluster
+  hosts: workers
+  gather_facts: no
+  tasks:
+    - name: Check if already joined
+      stat:
+        path: /etc/kubernetes/kubelet.conf
+      register: kubelet_conf
+
+    - name: Join as worker node
+      shell: "{{ hostvars['controller-1']['worker_join_cmd'] }} --ignore-preflight-errors=all"
+      when: not kubelet_conf.stat.exists
+
+- name: Verify cluster
+  hosts: controller-1
+  gather_facts: no
+  tasks:
+    - name: Wait for nodes to be ready
+      shell: kubectl get nodes
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      register: nodes_output
+      retries: 10
+      delay: 15
+      until: nodes_output.rc == 0
+
+    - name: Show cluster nodes
+      debug:
+        msg: "{{ nodes_output.stdout_lines }}"
+
+    - name: Copy kubeconfig to shared location
+      fetch:
+        src: /etc/kubernetes/admin.conf
+        dest: /ansible/kubeconfig
+        flat: yes
