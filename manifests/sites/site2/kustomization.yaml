@@ -34,3 +34,23 @@ patches:
       - op: replace
         path: /spec/rules/0/host
         value: pma-site2.local
+  - target:
+      kind: Service
+      name: wordpress
+    patch: |
+      - op: replace
+        path: /spec/type
+        value: NodePort
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 30082
+  - target:
+      kind: Service
+      name: phpmyadmin
+    patch: |
+      - op: replace
+        path: /spec/type
+        value: NodePort
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 31182
