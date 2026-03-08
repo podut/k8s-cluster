@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
         - name: nginx
-          image: nginx:nonexistent-tag  # EROARE: Aceastã imagine nu existã
+          image: nginx:stable  # EROARE: Aceastã imagine nu existã
           ports:
             - containerPort: 80
