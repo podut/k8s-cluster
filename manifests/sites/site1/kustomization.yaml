@@ -56,3 +56,5 @@ patches:
       - op: add
         path: /spec/ports/0/nodePort
         value: 31181
+
+# Managed by Podut Petru
