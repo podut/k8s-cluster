@@ -133,3 +133,29 @@ data:
         }
       ]
     }
+  vault-overview.json: |
+    {
+      "title": "4. Vault Security Overview",
+      "uid": "vault-overview",
+      "panels": [
+        {
+          "title": "Vault Status",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 12, "x": 0, "y": 0 },
+          "targets": [{ "expr": "sum(kube_pod_status_phase{namespace='vault', phase='Running'})" }],
+          "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "1": { "text": "ONLINE", "color": "green" }, "0": { "text": "OFFLINE", "color": "red" } } }] } }
+        },
+        {
+          "title": "Vault Memory Usage (MiB)",
+          "type": "gauge",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+          "targets": [{ "expr": "sum(container_memory_usage_bytes{namespace='vault'}) / 1024 / 1024" }]
+        },
+        {
+          "title": "Vault CPU Load (Cores)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+          "targets": [{ "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='vault'}[5m]))" }]
+        }
+      ]
+    }
