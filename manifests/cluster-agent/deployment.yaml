@@ -20,8 +20,8 @@ spec:
       serviceAccountName: cluster-agent
       containers:
         - name: agent
-          image: cluster-agent:latest
-          imagePullPolicy: IfNotPresent
+          image: podutpetru/cluster-agent:latest
+          imagePullPolicy: Always
           env:
             - name: GEMINI_API_KEY
               valueFrom:
