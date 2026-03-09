@@ -8,13 +8,6 @@ resources:
 
 patches:
   - target:
-      kind: Deployment
-      name: wordpress
-    patch: |
-      - op: replace
-        path: /spec/template/spec/containers/0/image
-        value: wordpress:6.5-php8.2-apache
-  - target:
       kind: Ingress
       name: wordpress-ingress
     patch: |
