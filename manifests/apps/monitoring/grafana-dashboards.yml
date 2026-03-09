@@ -159,3 +159,104 @@ data:
         }
       ]
     }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-pods
+  namespace: monitoring
+data:
+  pod-resources.json: |
+    {
+      "title": "5. Pod Resources (CPU, Memory, Disk)",
+      "uid": "pod-resources",
+      "timezone": "browser",
+      "templating": {
+        "list": [
+          {
+            "name": "namespace",
+            "type": "query",
+            "query": "label_values(kube_pod_info, namespace)",
+            "refresh": 1,
+            "multi": false,
+            "allValue": ""
+          },
+          {
+            "name": "pod",
+            "type": "query",
+            "query": "label_values(kube_pod_info{namespace='$namespace'}, pod)",
+            "refresh": 1,
+            "multi": true,
+            "allValue": ".*"
+          }
+        ]
+      },
+      "panels": [
+        {
+          "title": "Pod CPU Usage (Cores)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace='$namespace', pod=~'$pod', container!='POD'}[5m])) by (pod)",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "title": "Pod Memory Usage (MiB)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "targets": [
+            {
+              "expr": "sum(container_memory_usage_bytes{namespace='$namespace', pod=~'$pod', container!='POD'}) by (pod) / 1024 / 1024",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "title": "Pod Memory RSS (MiB)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "targets": [
+            {
+              "expr": "sum(container_memory_rss{namespace='$namespace', pod=~'$pod', container!='POD'}) by (pod) / 1024 / 1024",
+              "legendFormat": "{{pod}} - RSS"
+            }
+          ]
+        },
+        {
+          "title": "Pod Disk Usage (GiB)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "targets": [
+            {
+              "expr": "kubelet_volume_stats_used_bytes{namespace='$namespace'} / 1024 / 1024 / 1024",
+              "legendFormat": "{{persistentvolumeclaim}}"
+            }
+          ]
+        },
+        {
+          "title": "Pod Disk Available (GiB)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+          "targets": [
+            {
+              "expr": "kubelet_volume_stats_available_bytes{namespace='$namespace'} / 1024 / 1024 / 1024",
+              "legendFormat": "{{persistentvolumeclaim}} - Available"
+            }
+          ]
+        },
+        {
+          "title": "Pod Disk Usage %",
+          "type": "gauge",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+          "targets": [
+            {
+              "expr": "kubelet_volume_stats_used_bytes{namespace='$namespace'} / kubelet_volume_stats_capacity_bytes{namespace='$namespace'} * 100",
+              "legendFormat": "{{persistentvolumeclaim}}"
+            }
+          ]
+        }
+      ]
+    }
