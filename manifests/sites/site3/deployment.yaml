@@ -18,21 +18,25 @@ spec:
           image: wordpress:6-php8.2-apache
           env:
             - name: WORDPRESS_DB_HOST
-              value: mariadb-fantoma
+              value: mariadb-fantoma.wp-site3.svc.cluster.local
+            - name: WORDPRESS_DB_USER
+              value: wordpress
             - name: WORDPRESS_DB_PASSWORD
               value: "parola123"
+            - name: WORDPRESS_DB_NAME
+              value: wordpress
           livenessProbe:
             httpGet:
-              path: /wp-login.php
+              path: /readme.html
               port: 80
-            initialDelaySeconds: 60
+            initialDelaySeconds: 120
             periodSeconds: 10
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /wp-login.php
+              path: /readme.html
               port: 80
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 10
             failureThreshold: 3
           resources:
