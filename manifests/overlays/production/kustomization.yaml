@@ -1,0 +1,5 @@
+resources:
+- ../../base/cluster-agent
+- ../../base/broken-app
+- ../../base/vault
+- ../../base/wordpress
