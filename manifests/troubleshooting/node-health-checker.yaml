@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-health-checker
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      name: node-health-checker
+  template:
+    metadata:
+      labels:
+        name: node-health-checker
+    spec:
+      hostNetwork: true
+      hostPID: true
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node.kubernetes.io/not-ready"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: health-checker
+          image: alpine:latest
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              apk add --no-cache curl jq
+              echo "Checking kubelet status on $(hostname)..."
+              
+              # Check if kubelet is running
+              if ! pgrep kubelet > /dev/null; then
+                echo "Kubelet not running! Attempting to restart..."
+                systemctl restart kubelet || echo "Failed to restart kubelet"
+                sleep 30
+              fi
+              
+              # Check kubelet health endpoint
+              if curl -s -f http://localhost:10248/healthz > /dev/null; then
+                echo "Kubelet health endpoint is healthy"
+              else
+                echo "Kubelet health endpoint is NOT responding"
+              fi
+              
+              # Check connectivity to API server
+              if timeout 5 curl -k -s -f https://kubernetes.default.svc:443/healthz > /dev/null; then
+                echo "API server connectivity: OK"
+              else
+                echo "API server connectivity: FAILED"
+              fi
+              
+              # Check disk space
+              df -h /var/lib/kubelet | tail -1
+              
+              # Check memory
+              free -m
+              
+              # Sleep to keep container running for inspection
+              sleep 3600
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
