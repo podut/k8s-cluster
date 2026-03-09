@@ -175,6 +175,63 @@ def handle_script_fix(issue: checks.Issue, handler_name: str) -> bool:
     return pr is not None
 
 
+def restart_deployment(issue: checks.Issue) -> bool:
+    """Safely restart a deployment to recover from transient failures.
+
+    Only used for CrashLoopBackOff after multiple restarts (recovery attempt).
+    """
+    if not issue.resource.startswith("pod/"):
+        return False
+
+    pod_name = issue.resource.replace("pod/", "")
+    restarts = issue.details.get("restarts", 0)
+
+    # Only restart if pod has crashed multiple times (indicates potential recovery)
+    if restarts < 5:
+        log.info("Pod has only %d restarts, not restarting yet", restarts)
+        return False
+
+    log.info("Attempting safe restart of deployment in %s", issue.namespace)
+
+    try:
+        from kubernetes import client, config
+        apps = client.AppsV1Api()
+
+        # Get all deployments in namespace to find which one owns this pod
+        deployments = apps.list_namespaced_deployment(issue.namespace)
+        target_deploy = None
+        for dep in deployments.items:
+            if pod_name.startswith(dep.metadata.name):
+                target_deploy = dep.metadata.name
+                break
+
+        if not target_deploy:
+            log.warning("Could not find deployment for pod %s", pod_name)
+            return False
+
+        # Patch deployment to trigger rollout (add annotation with timestamp)
+        now = time.time()
+        body = {
+            "spec": {
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": str(now)
+                        }
+                    }
+                }
+            }
+        }
+
+        apps.patch_namespaced_deployment(target_deploy, issue.namespace, body)
+        log.info("✓ Deployment %s restarted (rollout triggered)", target_deploy)
+        return True
+
+    except Exception as e:
+        log.warning("Failed to restart deployment: %s", e)
+        return False
+
+
 def save_generated_secrets(secrets: dict, namespace: str):
     """Log generated secrets for manual review — NOT auto-saved to Vault for safety."""
     if not secrets:
@@ -312,6 +369,12 @@ def run_check(v1: client.CoreV1Api, apps: client.AppsV1Api):
             if route_result["type"] == "skip":
                 log.info("Skipping: %s", route_result["reason"])
                 continue
+            elif route_result["type"] == "restart":
+                log.info("Attempting safe restart for: %s", issue.summary)
+                success = restart_deployment(issue)
+                if not success:
+                    # Fallback to AI analysis
+                    success = handle_ai_fix(issue, state, issue.severity)
             elif route_result["type"] == "script":
                 success = handle_script_fix(issue, route_result["handler"])
                 if not success:
@@ -322,7 +385,10 @@ def run_check(v1: client.CoreV1Api, apps: client.AppsV1Api):
 
             if success:
                 handled.add(issue_key(issue))
-                log.info("✓ PR created for: %s", issue.summary)
+                if route_result["type"] == "restart":
+                    log.info("✓ Deployment restarted for: %s", issue.summary)
+                else:
+                    log.info("✓ PR created for: %s", issue.summary)
             else:
                 log.warning("✗ Could not fix: %s", issue.summary)
         except Exception as e:

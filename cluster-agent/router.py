@@ -12,6 +12,11 @@ SCRIPT_FIXES = {
     # CrashLoopBackOff -> AI (prea multe cauze posibile: bad config, missing secret, OOM, etc.)
 }
 
+# Categories that can be recovered by safe restart
+RESTART_RECOVERY = {
+    "CrashLoopBackOff",  # If restarts >= 5, likely transient issue
+}
+
 # Categories that always need AI
 AI_REQUIRED = {
     "NodeNotReady",
@@ -24,6 +29,7 @@ def route(issue: Issue) -> dict:
     """Decide how to handle an issue.
 
     Returns:
+        {"type": "restart"} or
         {"type": "script", "handler": "fix_name"} or
         {"type": "ai", "severity": int} or
         {"type": "skip", "reason": "..."}
@@ -33,6 +39,10 @@ def route(issue: Issue) -> dict:
     # Severity 1: just log, don't act
     if issue.severity <= 1:
         return {"type": "skip", "reason": "Low severity, monitoring only"}
+
+    # CrashLoopBackOff with high restart count: try restart recovery
+    if cat in RESTART_RECOVERY and issue.details.get("restarts", 0) >= 5:
+        return {"type": "restart"}
 
     # Known script fixes for severity 2
     if issue.severity <= 2 and cat in SCRIPT_FIXES:
