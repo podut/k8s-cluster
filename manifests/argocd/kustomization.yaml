@@ -11,6 +11,8 @@ resources:
   # WordPress sites
   - app-wordpress-site1.yaml
   - app-wordpress-site2.yaml
+  - app-wordpress-site3.yaml
+  - app-wordpress-site4.yaml
 
   # Infrastructure
   - app-vault.yaml
