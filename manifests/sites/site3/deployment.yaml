@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress
+  namespace: wp-site3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wordpress
+  template:
+    metadata:
+      labels:
+        app: wordpress
+    spec:
+      containers:
+        - name: wordpress
+          image: wordpress:99.99-broken  # USE CASE 1: Image Error
+          env:
+            - name: WORDPRESS_DB_HOST
+              value: mariadb-fantoma     # USE CASE 2: Config Error
+            - name: WORDPRESS_DB_PASSWORD
+              value: "parola123"
+          resources:
+            limits:
+              memory: "10Mi"             # USE CASE 3: OOM Error (too low)
+            requests:
+              cpu: "50m"
+              memory: "5Mi"
