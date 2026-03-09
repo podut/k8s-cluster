@@ -18,3 +18,7 @@ Thumbs.db
 
 # Exclude binaries
 kubectl.exe
+
+# Python cache
+__pycache__/
+*.pyc

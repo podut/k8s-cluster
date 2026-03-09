@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-agent
+  namespace: cluster-agent
+  labels:
+    app: cluster-agent
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: cluster-agent
+  template:
+    metadata:
+      labels:
+        app: cluster-agent
+    spec:
+      serviceAccountName: cluster-agent
+      containers:
+        - name: agent
+          image: podutpetru/cluster-agent:latest
+          imagePullPolicy: Always
+          env:
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-agent-secrets
+                  key: GEMINI_API_KEY
+            - name: DEEPSEEK_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-agent-secrets
+                  key: DEEPSEEK_API_KEY
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-agent-secrets
+                  key: GITHUB_TOKEN
+            - name: GITHUB_REPO
+              value: "podut/k8s-cluster"
+            - name: MANIFESTS_PATH
+              value: "manifests"
+            - name: CHECK_INTERVAL
+              value: "300"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+      restartPolicy: Always

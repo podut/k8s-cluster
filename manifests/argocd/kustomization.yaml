@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# ArgoCD App-of-Apps: toate aplicatiile din cluster
+resources:
+  # Config
+  - repo-secret.yaml
+
+  # WordPress sites
+  - app-wordpress-site1.yaml
+  - app-wordpress-site2.yaml
+
+  # Infrastructure
+  - app-vault.yaml
+  - app-monitoring.yaml
+  - app-gitea.yaml
+  - app-metallb.yaml
+  - app-cluster-agent.yaml
+  - app-broken-app.yaml

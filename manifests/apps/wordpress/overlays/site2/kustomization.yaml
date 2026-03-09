@@ -4,7 +4,7 @@ kind: Kustomization
 namespace: wp-site2
 
 resources:
-  - ../../wordpress-base
+  - ../../base
 
 patches:
   - target:
@@ -13,13 +13,13 @@ patches:
     patch: |
       - op: replace
         path: /stringData/MYSQL_ROOT_PASSWORD
-        value: site2root456
+        value: VAULT:secret/data/wordpress/site2#MYSQL_ROOT_PASSWORD
       - op: replace
         path: /stringData/MYSQL_PASSWORD
-        value: site2pass456
+        value: VAULT:secret/data/wordpress/site2#MYSQL_PASSWORD
       - op: replace
         path: /stringData/WORDPRESS_DB_PASSWORD
-        value: site2pass456
+        value: VAULT:secret/data/wordpress/site2#WORDPRESS_DB_PASSWORD
   - target:
       kind: Ingress
       name: wordpress-ingress
