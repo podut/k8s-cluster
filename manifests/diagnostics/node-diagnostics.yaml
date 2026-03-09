@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-diagnostics
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      name: node-diagnostics
+  template:
+    metadata:
+      labels:
+        name: node-diagnostics
+    spec:
+      hostNetwork: true
+      hostPID: true
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+        - key: node.kubernetes.io/not-ready
+          operator: Exists
+          effect: NoExecute
+      containers:
+        - name: diagnostics
+          image: alpine:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "=== Node Diagnostics for $(hostname) ==="
+              echo "\n1. Checking kubelet status..."
+              systemctl status kubelet 2>/dev/null || echo "Kubelet service not found via systemctl"
+              echo "\n2. Checking kubelet process..."
+              ps aux | grep kubelet | grep -v grep || echo "No kubelet process found"
+              echo "\n3. Checking disk usage..."
+              df -h
+              echo "\n4. Checking memory usage..."
+              free -h
+              echo "\n5. Checking network connectivity to control plane..."
+              timeout 5 ping -c 3 controller-1 || echo "Cannot reach controller-1"
+              echo "\n6. Checking kubelet logs (last 20 lines)..."
+              journalctl -u kubelet -n 20 2>/dev/null || echo "Cannot access kubelet logs"
+              echo "\n=== Diagnostics complete ==="
+              sleep 3600
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
