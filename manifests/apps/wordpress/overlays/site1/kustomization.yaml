@@ -6,22 +6,7 @@ namespace: wp-site1
 resources:
   - ../../base
 
-namePrefix: ""
-
 patches:
-  - target:
-      kind: Secret
-      name: wp-secrets
-    patch: |
-      - op: replace
-        path: /stringData/MYSQL_ROOT_PASSWORD
-        value: VAULT:secret/data/wordpress/site1#MYSQL_ROOT_PASSWORD
-      - op: replace
-        path: /stringData/MYSQL_PASSWORD
-        value: VAULT:secret/data/wordpress/site1#MYSQL_PASSWORD
-      - op: replace
-        path: /stringData/WORDPRESS_DB_PASSWORD
-        value: VAULT:secret/data/wordpress/site1#WORDPRESS_DB_PASSWORD
   - target:
       kind: Ingress
       name: wordpress-ingress
@@ -56,17 +41,3 @@ patches:
       - op: add
         path: /spec/ports/0/nodePort
         value: 31181
-  - target:
-      kind: Deployment
-      name: wordpress
-    patch: |
-      - op: replace
-        path: /spec/template/spec/containers/0/image
-        value: wordpress:latest
-  - target:
-      kind: Deployment
-      name: wordpress
-    patch: |
-      - op: replace
-        path: /spec/template/spec/containers/0/image
-        value: wordpress:6.5.2-apache

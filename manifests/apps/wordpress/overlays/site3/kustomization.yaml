@@ -8,19 +8,6 @@ resources:
 
 patches:
   - target:
-      kind: Secret
-      name: wp-secrets
-    patch: |
-      - op: replace
-        path: /stringData/MYSQL_ROOT_PASSWORD
-        value: VAULT:secret/data/wordpress/site3#MYSQL_ROOT_PASSWORD
-      - op: replace
-        path: /stringData/MYSQL_PASSWORD
-        value: VAULT:secret/data/wordpress/site3#MYSQL_PASSWORD
-      - op: replace
-        path: /stringData/WORDPRESS_DB_PASSWORD
-        value: VAULT:secret/data/wordpress/site3#WORDPRESS_DB_PASSWORD
-  - target:
       kind: Ingress
       name: wordpress-ingress
     patch: |

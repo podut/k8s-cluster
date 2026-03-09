@@ -8,19 +8,6 @@ resources:
 
 patches:
   - target:
-      kind: Secret
-      name: wp-secrets
-    patch: |
-      - op: replace
-        path: /stringData/MYSQL_ROOT_PASSWORD
-        value: VAULT:secret/data/wordpress/site2#MYSQL_ROOT_PASSWORD
-      - op: replace
-        path: /stringData/MYSQL_PASSWORD
-        value: VAULT:secret/data/wordpress/site2#MYSQL_PASSWORD
-      - op: replace
-        path: /stringData/WORDPRESS_DB_PASSWORD
-        value: VAULT:secret/data/wordpress/site2#WORDPRESS_DB_PASSWORD
-  - target:
       kind: Ingress
       name: wordpress-ingress
     patch: |
@@ -54,5 +41,3 @@ patches:
       - op: add
         path: /spec/ports/0/nodePort
         value: 31182
-
-# Managed by Podut Petru
