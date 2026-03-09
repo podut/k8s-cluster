@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
         - name: nginx
-          image: nginx:stable # Changed to a valid Nginx image tag
+          image: nginx:latest  # Changed from nonexistent-tag to a valid tag
           ports:
             - containerPort: 80
