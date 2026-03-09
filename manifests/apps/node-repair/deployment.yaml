@@ -1,0 +1,201 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: node-repair
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: node-repair-sa
+  namespace: node-repair
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: node-repair-role
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "pods", "events"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["apps"]
+    resources: ["daemonsets", "deployments"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: node-repair-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: node-repair-role
+subjects:
+  - kind: ServiceAccount
+    name: node-repair-sa
+    namespace: node-repair
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: node-repair-scripts
+  namespace: node-repair
+data:
+  check-node.sh: |
+    #!/bin/bash
+    NODE_NAME="$1"
+    echo "Checking node: $NODE_NAME"
+    
+    # Check if node exists in kubectl
+    if kubectl get node "$NODE_NAME" >/dev/null 2>&1; then
+      echo "Node found in Kubernetes API"
+      NODE_STATUS=$(kubectl get node "$NODE_NAME" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}')
+      echo "Node Ready status: $NODE_STATUS"
+      
+      if [[ "$NODE_STATUS" == "Unknown" ]]; then
+        echo "Node is in Unknown state - attempting diagnostics..."
+        
+        # Try to get node details
+        kubectl describe node "$NODE_NAME"
+        
+        # Check for recent events
+        kubectl get events --field-selector involvedObject.name="$NODE_NAME" --sort-by='.lastTimestamp'
+        
+        echo "\nSuggested actions:"
+        echo "1. SSH into the node and check kubelet status: systemctl status kubelet"
+        echo "2. Check kubelet logs: journalctl -u kubelet -f"
+        echo "3. Restart kubelet if needed: systemctl restart kubelet"
+        echo "4. Check node resources: free -h, df -h, top"
+        echo "5. Check network connectivity to control plane"
+      fi
+    else
+      echo "Node not found in Kubernetes API"
+    fi
+  
+  repair-node.sh: |
+    #!/bin/bash
+    NODE_NAME="$1"
+    ACTION="$2"
+    
+    echo "Attempting to repair node: $NODE_NAME with action: $ACTION"
+    
+    case "$ACTION" in
+      "drain")
+        echo "Draining node $NODE_NAME..."
+        kubectl drain "$NODE_NAME" --ignore-daemonsets --delete-emptydir-data
+        ;;
+      "uncordon")
+        echo "Uncordoning node $NODE_NAME..."
+        kubectl uncordon "$NODE_NAME"
+        ;;
+      "restart-kubelet")
+        echo "Note: This requires SSH access to the node"
+        echo "To restart kubelet on $NODE_NAME:"
+        echo "ssh $NODE_NAME systemctl restart kubelet"
+        ;;
+      *)
+        echo "Unknown action: $ACTION"
+        echo "Available actions: drain, uncordon, restart-kubelet"
+        ;;
+    esac
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-repair-tool
+  namespace: node-repair
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node-repair-tool
+  template:
+    metadata:
+      labels:
+        app: node-repair-tool
+    spec:
+      serviceAccountName: node-repair-sa
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: node-repair
+          image: bitnami/kubectl:latest
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "Node Repair Tool started"
+              echo "Target node: worker-3"
+              echo ""
+              echo "=== Current Node Status ==="
+              kubectl get nodes
+              echo ""
+              echo "=== Detailed worker-3 Status ==="
+              kubectl describe node worker-3
+              echo ""
+              echo "=== Recent Events for worker-3 ==="
+              kubectl get events --field-selector involvedObject.name=worker-3 --sort-by='.lastTimestamp'
+              echo ""
+              echo "=== Suggested Commands ==="
+              echo "1. Check if kubelet is running on worker-3:"
+              echo "   ssh worker-3 systemctl status kubelet"
+              echo ""
+              echo "2. Check kubelet logs:"
+              echo "   ssh worker-3 journalctl -u kubelet -n 50"
+              echo ""
+              echo "3. Restart kubelet if needed:"
+              echo "   ssh worker-3 systemctl restart kubelet"
+              echo ""
+              echo "4. Check node resources:"
+              echo "   ssh worker-3 free -h"
+              echo "   ssh worker-3 df -h"
+              echo "   ssh worker-3 top -b -n 1 | head -20"
+              echo ""
+              echo "5. Check network connectivity:"
+              echo "   ssh worker-3 ping -c 3 controller-1"
+              echo ""
+              echo "=== If kubelet cannot be recovered ==="
+              echo "6. Drain the node (moves pods to other nodes):"
+              echo "   kubectl drain worker-3 --ignore-daemonsets --delete-emptydir-data"
+              echo ""
+              echo "7. After fixing the node, uncordon it:"
+              echo "   kubectl uncordon worker-3"
+              
+              # Keep container running for debugging
+              tail -f /dev/null
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 50m
+            limits:
+              memory: 128Mi
+              cpu: 200m
+      volumes:
+        - name: scripts
+          configMap:
+            name: node-repair-scripts
+            defaultMode: 0755
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-repair-tool
+  namespace: node-repair
+spec:
+  selector:
+    app: node-repair-tool
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
