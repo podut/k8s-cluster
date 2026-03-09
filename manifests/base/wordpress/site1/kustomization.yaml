@@ -1,0 +1,3 @@
+resources:
+- ../../../wordpress-base
+namespace: wp-site1
