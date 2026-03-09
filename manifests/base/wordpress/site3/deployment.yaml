@@ -45,7 +45,7 @@ spec:
               mountPath: /var/www/html
       containers:
         - name: wordpress
-          image: wordpress:6-php8.2-apache
+          image: wordpress:6.5.2-apache
           command: ["apache2-foreground"]
           env:
             - name: WORDPRESS_DB_HOST
@@ -63,14 +63,14 @@ spec:
               value: localhost
           livenessProbe:
             httpGet:
-              path: /wp-admin/install.php
+              path: /
               port: 80
-            initialDelaySeconds: 60
+            initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /wp-admin/install.php
+              path: /
               port: 80
             initialDelaySeconds: 30
             periodSeconds: 5
