@@ -23,19 +23,22 @@ spec:
             - name: WORDPRESS_DB_USER
               value: wordpress
             - name: WORDPRESS_DB_PASSWORD
-              value: "parola123"
+              valueFrom:
+                secretKeyRef:
+                  name: wp-secrets
+                  key: WORDPRESS_DB_PASSWORD
             - name: WORDPRESS_DB_NAME
               value: wordpress
           livenessProbe:
             httpGet:
-              path: /wp-admin/install.php
+              path: /
               port: 80
             initialDelaySeconds: 120
             periodSeconds: 10
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /wp-admin/install.php
+              path: /
               port: 80
             initialDelaySeconds: 60
             periodSeconds: 10
@@ -47,6 +50,19 @@ spec:
             requests:
               cpu: "100m"
               memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress
+  namespace: wp-site3
+spec:
+  selector:
+    app: wordpress
+  ports:
+    - port: 80
+      targetPort: 80
+  type: NodePort
 ---
 apiVersion: v1
 kind: Service
@@ -80,13 +96,19 @@ spec:
           image: mariadb:10.11
           env:
             - name: MYSQL_ROOT_PASSWORD
-              value: "rootpass"
+              valueFrom:
+                secretKeyRef:
+                  name: wp-secrets
+                  key: MYSQL_ROOT_PASSWORD
             - name: MYSQL_DATABASE
               value: wordpress
             - name: MYSQL_USER
               value: wordpress
             - name: MYSQL_PASSWORD
-              value: "parola123"
+              valueFrom:
+                secretKeyRef:
+                  name: wp-secrets
+                  key: MYSQL_PASSWORD
           ports:
             - containerPort: 3306
           resources:
@@ -115,3 +137,14 @@ spec:
   resources:
     requests:
       storage: 1Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: wp-secrets
+  namespace: wp-site3
+type: Opaque
+stringData:
+  MYSQL_ROOT_PASSWORD: "rootpass"
+  MYSQL_PASSWORD: "parola123"
+  WORDPRESS_DB_PASSWORD: "parola123"
