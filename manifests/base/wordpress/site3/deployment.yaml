@@ -26,6 +26,23 @@ spec:
                 sleep 2;
               done
               echo "MariaDB is ready!";
+        - name: init-wordpress
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              # Check if WordPress files exist in the volume
+              if [ -f /var/www/html/wp-config.php ]; then
+                echo "WordPress already installed.";
+              else
+                echo "WordPress not found in volume. Ensuring directory exists.";
+                mkdir -p /var/www/html;
+                chown -R www-data:www-data /var/www/html;
+              fi
+          volumeMounts:
+            - name: wordpress-data
+              mountPath: /var/www/html
       containers:
         - name: wordpress
           image: wordpress:6-php8.2-apache
@@ -46,14 +63,14 @@ spec:
               value: localhost
           livenessProbe:
             httpGet:
-              path: /
+              path: /wp-admin/install.php
               port: 80
             initialDelaySeconds: 60
             periodSeconds: 10
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /
+              path: /wp-admin/install.php
               port: 80
             initialDelaySeconds: 30
             periodSeconds: 5
