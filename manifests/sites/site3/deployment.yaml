@@ -42,6 +42,8 @@ spec:
                   key: WORDPRESS_DB_PASSWORD
             - name: WORDPRESS_DB_NAME
               value: wordpress
+            - name: APACHE_SERVER_NAME
+              value: localhost
           livenessProbe:
             httpGet:
               path: /wp-admin/install.php
