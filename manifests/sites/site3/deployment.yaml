@@ -1,3 +1,4 @@
+# --- manifests/sites/site3/deployment.yaml ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,7 +16,7 @@ spec:
     spec:
       containers:
         - name: wordpress
-          image: wordpress:latest
+          image: wordpress:6-php8.2-apache
           env:
             - name: WORDPRESS_DB_HOST
               value: mariadb-fantoma
