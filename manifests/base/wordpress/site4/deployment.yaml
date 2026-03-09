@@ -19,3 +19,10 @@ spec:
           env:
             - name: WORDPRESS_DB_HOST
               value: nu-exista-db
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
