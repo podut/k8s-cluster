@@ -56,6 +56,11 @@ spec:
             # Safety: PR mode, nu push direct pe main
             - name: AUTONOMOUS_MODE
               value: "false"
+            # Concurrent issue handling (v1.2.0+)
+            - name: CONCURRENT_MODE
+              value: "true"
+            - name: CONCURRENT_WORKERS
+              value: "4"
           resources:
             requests:
               cpu: 50m

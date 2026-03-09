@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -325,6 +326,49 @@ def handle_ai_fix(issue: checks.Issue, cluster_state: dict, severity: int) -> bo
     return pr is not None
 
 
+def handle_issue_concurrent(issue: checks.Issue, state: dict, handled: set) -> tuple:
+    """Handle a single issue (can be run concurrently).
+
+    Returns: (issue_key, success, route_type)
+    """
+    key = issue_key(issue)
+
+    try:
+        route_result = router.route(issue)
+        log.info("Route %s → %s", issue.category, route_result["type"])
+
+        success = False
+        if route_result["type"] == "skip":
+            log.info("Skipping: %s", route_result["reason"])
+            return (key, False, "skip")
+        elif route_result["type"] == "restart":
+            log.info("Attempting safe restart for: %s", issue.summary)
+            success = restart_deployment(issue)
+            if not success:
+                # Fallback to AI analysis
+                success = handle_ai_fix(issue, state, issue.severity)
+        elif route_result["type"] == "script":
+            success = handle_script_fix(issue, route_result["handler"])
+            if not success:
+                # Fallback to AI
+                success = handle_ai_fix(issue, state, issue.severity)
+        elif route_result["type"] == "ai":
+            success = handle_ai_fix(issue, state, route_result["severity"])
+
+        if success:
+            if route_result["type"] == "restart":
+                log.info("✓ Deployment restarted for: %s", issue.summary)
+            else:
+                log.info("✓ PR created for: %s", issue.summary)
+        else:
+            log.warning("✗ Could not fix: %s", issue.summary)
+
+        return (key, success, route_result["type"])
+    except Exception as e:
+        log.error("Error handling issue %s: %s", issue.summary, e, exc_info=True)
+        return (key, False, "error")
+
+
 def run_check(v1: client.CoreV1Api, apps: client.AppsV1Api):
     """Run one check cycle."""
     log.info("=== Running cluster check ===")
@@ -359,41 +403,32 @@ def run_check(v1: client.CoreV1Api, apps: client.AppsV1Api):
         log.info("All issues already handled, waiting for resolution")
         return
 
-    # Step 3: Route and handle each issue
-    for issue in new_issues:
-        try:
-            route_result = router.route(issue)
-            log.info("Route %s → %s", issue.category, route_result["type"])
+    # Step 3: Route and handle issues CONCURRENTLY
+    log.info("Processing %d issue(s) concurrently...", len(new_issues))
 
-            success = False
-            if route_result["type"] == "skip":
-                log.info("Skipping: %s", route_result["reason"])
-                continue
-            elif route_result["type"] == "restart":
-                log.info("Attempting safe restart for: %s", issue.summary)
-                success = restart_deployment(issue)
-                if not success:
-                    # Fallback to AI analysis
-                    success = handle_ai_fix(issue, state, issue.severity)
-            elif route_result["type"] == "script":
-                success = handle_script_fix(issue, route_result["handler"])
-                if not success:
-                    # Fallback to AI
-                    success = handle_ai_fix(issue, state, issue.severity)
-            elif route_result["type"] == "ai":
-                success = handle_ai_fix(issue, state, route_result["severity"])
+    # Get concurrent mode settings from env
+    concurrent_mode = os.getenv("CONCURRENT_MODE", "true").lower() == "true"
+    max_workers_env = int(os.getenv("CONCURRENT_WORKERS", "4"))
+    max_workers = min(max_workers_env, len(new_issues)) if concurrent_mode else 1
 
-            if success:
-                handled.add(issue_key(issue))
-                if route_result["type"] == "restart":
-                    log.info("✓ Deployment restarted for: %s", issue.summary)
-                else:
-                    log.info("✓ PR created for: %s", issue.summary)
-            else:
-                log.warning("✗ Could not fix: %s", issue.summary)
-        except Exception as e:
-            log.error("Error handling issue %s: %s", issue.summary, e)
-            continue
+    if not concurrent_mode:
+        log.info("Concurrent mode disabled (CONCURRENT_MODE=false)")
+        max_workers = 1
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(handle_issue_concurrent, issue, state, handled): issue
+            for issue in new_issues
+        }
+
+        for future in as_completed(futures):
+            try:
+                key, success, route_type = future.result()
+                if success and route_type != "skip":
+                    handled.add(key)
+            except Exception as e:
+                issue = futures[future]
+                log.error("Concurrent handler failed for %s: %s", issue.summary, e)
 
     save_handled(handled)
 
