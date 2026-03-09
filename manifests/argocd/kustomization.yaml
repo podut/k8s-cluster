@@ -2,6 +2,8 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 # ArgoCD App-of-Apps: toate aplicatiile din cluster
+# Deploy-ate de root Application din app-root.yaml
+# NOTE: app-root.yaml nu e inclus aici (e bootstrapped manual)
 resources:
   # Config
   - repo-secret.yaml
