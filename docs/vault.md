@@ -13,8 +13,8 @@ Acest document descrie integrarea Vault pentru gestionarea centralizată a secre
 
 Acesta rulează în mod **Persistent** (File Storage). Dacă clusterul se restartează, seiful trebuie descuiat manual.
 
-- **Unseal Key:** `[SCRIE_AICI_CHEIA_GENERATA]`
-- **Root Token:** `[SCRIE_AICI_TOKENUL_GENERAT]`
+- **Unseal Key:** `keys/vault.env`
+- **Root Token:** `keys/vault.env`
 
 ### Procedura de restart (Unseal)
 Dacă interfața web arată "Sealed", rulează:
@@ -43,7 +43,10 @@ Momentan, Vault centralizează următoarele parole:
 | :--- | :--- | :--- |
 | `secret/site1` | `root_password`, `db_password` | Parolele MariaDB și WordPress pentru Site 1 |
 | `secret/site2` | `root_password`, `db_password` | Parolele MariaDB și WordPress pentru Site 2 |
+| `secret/site3` | `root_password`, `db_password` | Parolele MariaDB și WordPress pentru Site 3 |
+| `secret/site4` | `root_password`, `db_password` | Parolele MariaDB și WordPress pentru Site 4 |
 | `secret/grafana` | `admin_password` | Parola de administrare a monitorizării |
+| `secret/cluster-agent/` | `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, `GITHUB_TOKEN` | API keys pentru cluster-agent |
 
 ## Cum se adaugă un secret nou
 
