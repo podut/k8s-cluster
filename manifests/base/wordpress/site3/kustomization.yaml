@@ -1,3 +1,63 @@
-resources:
-- deployment.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
 namespace: wp-site3
+
+resources:
+  - ../../wordpress-base
+
+patches:
+  - target:
+      kind: Secret
+      name: wp-secrets
+    patch: |
+      - op: replace
+        path: /stringData/MYSQL_ROOT_PASSWORD
+        value: VALUE_FROM_VAULT
+      - op: replace
+        path: /stringData/MYSQL_PASSWORD
+        value: VALUE_FROM_VAULT
+      - op: replace
+        path: /stringData/WORDPRESS_DB_PASSWORD
+        value: VALUE_FROM_VAULT
+  - target:
+      kind: Ingress
+      name: wordpress-ingress
+    patch: |
+      - op: replace
+        path: /spec/rules/0/host
+        value: site3.local
+  - target:
+      kind: Ingress
+      name: phpmyadmin-ingress
+    patch: |
+      - op: replace
+        path: /spec/rules/0/host
+        value: pma-site3.local
+  - target:
+      kind: Service
+      name: wordpress
+    patch: |
+      - op: replace
+        path: /spec/type
+        value: NodePort
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 30083
+  - target:
+      kind: Service
+      name: phpmyadmin
+    patch: |
+      - op: replace
+        path: /spec/type
+        value: NodePort
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 31183
+  - target:
+      kind: Deployment
+      name: wordpress
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: wordpress:6.5.2-apache
