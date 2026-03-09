@@ -16,6 +16,7 @@ spec:
       containers:
         - name: wordpress
           image: wordpress:6-php8.2-apache
+          command: ["apache2-foreground"]
           env:
             - name: WORDPRESS_DB_HOST
               value: mariadb-fantoma.wp-site3.svc.cluster.local
