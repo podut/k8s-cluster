@@ -1,0 +1,144 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: node-repair
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: node-repair-role
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods", "events"]
+    verbs: ["get", "list", "create"]
+  - apiGroups: ["apps"]
+    resources: ["daemonsets"]
+    verbs: ["get", "list", "create", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: node-repair-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: node-repair-role
+subjects:
+  - kind: ServiceAccount
+    name: node-repair
+    namespace: node-repair
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: node-repair
+  namespace: node-repair
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-health-check
+  namespace: node-repair
+spec:
+  selector:
+    matchLabels:
+      app: node-health-check
+  template:
+    metadata:
+      labels:
+        app: node-health-check
+    spec:
+      serviceAccountName: node-repair
+      hostNetwork: true
+      hostPID: true
+      tolerations:
+        - operator: "Exists"
+      nodeSelector:
+        kubernetes.io/hostname: worker-3
+      containers:
+        - name: health-check
+          image: alpine:latest
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              apk add --no-cache curl jq
+              echo "Starting node health diagnostics on $(hostname)"
+              
+              # Check if kubelet is running
+              if ! pgrep kubelet > /dev/null; then
+                echo "Kubelet is not running! Attempting to restart..."
+                # Try to restart kubelet (this may require systemd)
+                if command -v systemctl > /dev/null; then
+                  systemctl restart kubelet || echo "Failed to restart kubelet via systemctl"
+                else
+                  echo "Systemd not available, cannot restart kubelet"
+                fi
+              else
+                echo "Kubelet is running"
+              fi
+              
+              # Check network connectivity to API server
+              echo "Testing connectivity to Kubernetes API..."
+              if curl -k https://kubernetes.default.svc:443/healthz 2>/dev/null | grep -q "ok"; then
+                echo "API server connectivity: OK"
+              else
+                echo "API server connectivity: FAILED"
+              fi
+              
+              # Check node resources
+              echo "Checking system resources..."
+              echo "Memory free: $(free -m | awk 'NR==2{print $4}') MB"
+              echo "Disk usage: $(df -h / | awk 'NR==2{print $5}')"
+              
+              # Sleep to keep container running for inspection
+              sleep 3600
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: node-repair-script
+  namespace: node-repair
+data:
+  repair.sh: |
+    #!/bin/sh
+    echo "Node repair script for worker-3"
+    
+    # Diagnostic information
+    echo "=== System Information ==="
+    uname -a
+    echo "\n=== Kubelet Status ==="
+    systemctl status kubelet --no-pager || echo "Systemd not available"
+    echo "\n=== Network Interfaces ==="
+    ip addr show
+    echo "\n=== Routes ==="
+    ip route show
+    
+    # Attempt to fix common issues
+    echo "\n=== Attempting fixes ==="
+    
+    # Restart kubelet if it's not running
+    if ! systemctl is-active --quiet kubelet; then
+      echo "Restarting kubelet service..."
+      systemctl restart kubelet
+      sleep 5
+      systemctl status kubelet --no-pager
+    fi
+    
+    # Check and fix network connectivity
+    echo "\n=== Network Connectivity ==="
+    ping -c 3 kubernetes.default.svc || echo "Cannot ping API server"
+    
+    echo "\nRepair script completed"
