@@ -60,4 +60,10 @@ patches:
     patch: |
       - op: replace
         path: /spec/template/spec/containers/0/image
-        value: wordpress:6.5.2-apache
+        value: wordpress:6-php8.2-apache
+      - op: replace
+        path: /spec/template/spec/containers/0/livenessProbe/httpGet/path
+        value: /readme.html
+      - op: replace
+        path: /spec/template/spec/containers/0/readinessProbe/httpGet/path
+        value: /readme.html
