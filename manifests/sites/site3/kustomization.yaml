@@ -81,5 +81,5 @@ patches:
             path: /wp-admin/install.php
             port: 80
           initialDelaySeconds: 45
-          periodSeconds: 15
+          periodSeconds: 10
           failureThreshold: 3
