@@ -8,6 +8,16 @@ resources:
 
 patches:
   - target:
+      kind: Deployment
+      name: wordpress
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "500"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "100Gi"
+  - target:
       kind: Ingress
       name: wordpress-ingress
     patch: |

@@ -8,6 +8,13 @@ resources:
 
 patches:
   - target:
+      kind: Deployment
+      name: wordpress
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "1Mi"
+  - target:
       kind: Ingress
       name: wordpress-ingress
     patch: |

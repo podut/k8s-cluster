@@ -8,6 +8,13 @@ resources:
 
 patches:
   - target:
+      kind: Deployment
+      name: wordpress
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "invalid_db_host"
+  - target:
       kind: Ingress
       name: wordpress-ingress
     patch: |
