@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: node-diagnostics
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-diagnostics
+  namespace: node-diagnostics
+  labels:
+    app: node-diagnostics
+spec:
+  selector:
+    matchLabels:
+      app: node-diagnostics
+  template:
+    metadata:
+      labels:
+        app: node-diagnostics
+    spec:
+      hostNetwork: true
+      hostPID: true
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+        - operator: Exists
+      containers:
+        - name: diagnostics
+          image: alpine:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              apk add --no-cache curl netcat-openbsd iputils bind-tools
+              echo "=== Node Diagnostics for $(hostname) ==="
+              echo "\n1. Kubelet status:"
+              systemctl status kubelet 2>/dev/null || echo "Kubelet service not found"
+              echo "\n2. Network connectivity to control-plane:"
+              for node in controller-1 controller-2 controller-3; do
+                echo "Checking $node:"
+                ping -c 2 $node 2>/dev/null && echo "  Ping: OK" || echo "  Ping: FAILED"
+                nc -zv $node 6443 2>&1 | grep -q succeeded && echo "  Port 6443: OK" || echo "  Port 6443: FAILED"
+              done
+              echo "\n3. System resources:"
+              free -h
+              echo ""
+              df -h
+              echo ""
+              top -bn1 | head -20
+              echo "\n4. Docker/containerd status:"
+              systemctl status docker 2>/dev/null || systemctl status containerd 2>/dev/null || echo "Container runtime not found"
+              echo "\n5. Kubelet logs (last 20 lines):"
+              journalctl -u kubelet -n 20 2>/dev/null || echo "Kubelet logs not accessible"
+              sleep 3600
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: node-diagnostics
+  namespace: node-diagnostics
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: node-diagnostics
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: node-diagnostics
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: node-diagnostics
+subjects:
+  - kind: ServiceAccount
+    name: node-diagnostics
+    namespace: node-diagnostics
