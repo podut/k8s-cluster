@@ -28,14 +28,14 @@ spec:
               value: wordpress
           livenessProbe:
             httpGet:
-              path: /wp-login.php
+              path: /wp-admin/install.php
               port: 80
             initialDelaySeconds: 120
             periodSeconds: 10
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /wp-login.php
+              path: /wp-admin/install.php
               port: 80
             initialDelaySeconds: 60
             periodSeconds: 10
@@ -101,4 +101,17 @@ spec:
               mountPath: /var/lib/mysql
       volumes:
         - name: mariadb-data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: mariadb-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mariadb-pvc
+  namespace: wp-site3
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
