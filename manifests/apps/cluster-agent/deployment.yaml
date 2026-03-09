@@ -38,12 +38,24 @@ spec:
                 secretKeyRef:
                   name: cluster-agent-secrets
                   key: GITHUB_TOKEN
+            # Vault - pentru load_from_vault()
+            - name: VAULT_ROOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-agent-secrets
+                  key: VAULT_ROOT_TOKEN
+            - name: VAULT_ADDR
+              value: "http://vault.vault.svc:8200"
+            # Config
             - name: GITHUB_REPO
               value: "podut/k8s-cluster"
             - name: MANIFESTS_PATH
               value: "manifests"
             - name: CHECK_INTERVAL
-              value: "300"
+              value: "60"
+            # Safety: PR mode, nu push direct pe main
+            - name: AUTONOMOUS_MODE
+              value: "false"
           resources:
             requests:
               cpu: 50m
