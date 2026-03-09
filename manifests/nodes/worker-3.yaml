@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Node
+metadata:
+  name: worker-3
+spec:
+  podCIDR: 10.244.3.0/24
+  podCIDRs:
+  - 10.244.3.0/24
+  taints:
+  - effect: NoSchedule
+    key: node.kubernetes.io/unreachable
+    timeAdded: "2023-10-01T12:00:00Z"
+status:
+  addresses:
+  - address: 192.168.1.13
+    type: InternalIP
+  - address: worker-3
+    type: Hostname
+  conditions:
+  - lastHeartbeatTime: "2023-10-01T12:00:00Z"
+    lastTransitionTime: "2023-10-01T12:00:00Z"
+    message: Kubelet stopped posting node status.
+    reason: NodeStatusUnknown
+    status: Unknown
+    type: Ready
+  - lastHeartbeatTime: "2023-10-01T12:00:00Z"
+    lastTransitionTime: "2023-10-01T12:00:00Z"
+    message: Kubelet stopped posting node status.
+    reason: NodeStatusUnknown
+    status: Unknown
+    type: MemoryPressure
+  - lastHeartbeatTime: "2023-10-01T12:00:00Z"
+    lastTransitionTime: "2023-10-01T12:00:00Z"
+    message: Kubelet stopped posting node status.
+    reason: NodeStatusUnknown
+    status: Unknown
+    type: DiskPressure
+  - lastHeartbeatTime: "2023-10-01T12:00:00Z"
+    lastTransitionTime: "2023-10-01T12:00:00Z"
+    message: Kubelet stopped posting node status.
+    reason: NodeStatusUnknown
+    status: Unknown
+    type: PIDPressure
+  - lastHeartbeatTime: "2023-10-01T12:00:00Z"
+    lastTransitionTime: "2023-10-01T12:00:00Z"
+    message: Kubelet stopped posting node status.
+    reason: NodeStatusUnknown
+    status: Unknown
+    type: NetworkUnavailable
+  nodeInfo:
+    architecture: amd64
+    bootID: 12345678-1234-1234-1234-123456789012
+    containerRuntimeVersion: containerd://1.6.9
+    kernelVersion: 5.15.0-78-generic
+    kubeProxyVersion: v1.27.3
+    kubeletVersion: v1.27.3
+    machineID: 12345678901234567890123456789012
+    operatingSystem: linux
+    osImage: Ubuntu 22.04.2 LTS
+    systemUUID: 12345678-1234-1234-1234-123456789012
