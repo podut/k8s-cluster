@@ -6,8 +6,6 @@ namespace: wp-site3
 resources:
   - ../../wordpress-base
 
-namePrefix: ""
-
 patches:
   - target:
       kind: Secret
@@ -63,21 +61,25 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/image
         value: wordpress:6.5.2-apache
+  - target:
+      kind: Deployment
+      name: wordpress
+    patch: |
       - op: add
         path: /spec/template/spec/containers/0/readinessProbe
         value:
           httpGet:
-            path: /wp-admin/install.php
+            path: /
             port: 80
           initialDelaySeconds: 30
-          periodSeconds: 10
+          periodSeconds: 5
           failureThreshold: 3
       - op: add
         path: /spec/template/spec/containers/0/livenessProbe
         value:
           httpGet:
-            path: /wp-admin/install.php
+            path: /
             port: 80
           initialDelaySeconds: 45
-          periodSeconds: 15
+          periodSeconds: 10
           failureThreshold: 3
