@@ -13,7 +13,7 @@ patches:
     patch: |
       - op: replace
         path: /spec/template/spec/containers/0/image
-        value: wordpress:6.5
+        value: wordpress:latest
   - target:
       kind: Ingress
       name: wordpress-ingress
