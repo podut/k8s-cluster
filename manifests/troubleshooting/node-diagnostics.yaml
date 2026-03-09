@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-diagnostics
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      name: node-diagnostics
+  template:
+    metadata:
+      labels:
+        name: node-diagnostics
+    spec:
+      hostNetwork: true
+      hostPID: true
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+        - operator: Exists
+          effect: NoExecute
+        - operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: diagnostics
+          image: alpine:latest
+          command:
+            - sh
+            - -c
+            - |
+              apk add --no-cache curl netcat-openbsd iputils bind-tools
+              echo "=== System Information ==="
+              echo "Hostname: $(hostname)"
+              echo "Uptime: $(uptime)"
+              echo "=== Kubelet Status ==="
+              systemctl status kubelet --no-pager || echo "systemctl failed"
+              echo "=== Network Connectivity ==="
+              echo "Checking connectivity to control plane..."
+              for node in controller-1 controller-2 controller-3; do
+                if ping -c 2 $node >/dev/null 2>&1; then
+                  echo "✓ Can ping $node"
+                else
+                  echo "✗ Cannot ping $node"
+                fi
+              done
+              echo "=== Container Runtime ==="
+              crictl ps -a || docker ps -a || echo "No container runtime found"
+              echo "=== Disk Usage ==="
+              df -h
+              echo "=== Memory Usage ==="
+              free -h
+              echo "=== CPU Load ==="
+              cat /proc/loadavg
+              sleep 3600
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
