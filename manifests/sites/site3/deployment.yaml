@@ -28,14 +28,14 @@ spec:
               value: wordpress
           livenessProbe:
             httpGet:
-              path: /readme.html
+              path: /wp-login.php
               port: 80
             initialDelaySeconds: 120
             periodSeconds: 10
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /readme.html
+              path: /wp-login.php
               port: 80
             initialDelaySeconds: 60
             periodSeconds: 10
@@ -47,3 +47,58 @@ spec:
             requests:
               cpu: "100m"
               memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb
+  namespace: wp-site3
+spec:
+  selector:
+    app: mariadb
+  ports:
+    - port: 3306
+      targetPort: 3306
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mariadb
+  namespace: wp-site3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mariadb
+  template:
+    metadata:
+      labels:
+        app: mariadb
+    spec:
+      containers:
+        - name: mariadb
+          image: mariadb:10.11
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "rootpass"
+            - name: MYSQL_DATABASE
+              value: wordpress
+            - name: MYSQL_USER
+              value: wordpress
+            - name: MYSQL_PASSWORD
+              value: "parola123"
+          ports:
+            - containerPort: 3306
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+          volumeMounts:
+            - name: mariadb-data
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mariadb-data
+          emptyDir: {}
