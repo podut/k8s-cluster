@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-agent
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/podut/k8s-cluster.git
+    targetRevision: main
+    path: manifests/cluster-agent
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cluster-agent
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
