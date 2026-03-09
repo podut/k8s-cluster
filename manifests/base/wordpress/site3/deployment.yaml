@@ -46,14 +46,14 @@ spec:
               value: localhost
           livenessProbe:
             httpGet:
-              path: /wp-admin/install.php
+              path: /
               port: 80
             initialDelaySeconds: 60
             periodSeconds: 10
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /wp-admin/install.php
+              path: /
               port: 80
             initialDelaySeconds: 30
             periodSeconds: 5
