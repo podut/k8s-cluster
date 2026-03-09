@@ -1,3 +1,4 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -43,16 +44,16 @@ spec:
               value: wordpress
           livenessProbe:
             httpGet:
-              path: /readme.html
+              path: /wp-admin/install.php
               port: 80
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 10
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /readme.html
+              path: /wp-admin/install.php
               port: 80
-            initialDelaySeconds: 5
+            initialDelaySeconds: 30
             periodSeconds: 5
             failureThreshold: 3
           resources:
@@ -176,6 +177,6 @@ metadata:
   namespace: wp-site3
 type: Opaque
 stringData:
-  MYSQL_ROOT_PASSWORD: "rootpass"
-  MYSQL_PASSWORD: "parola123"
-  WORDPRESS_DB_PASSWORD: "parola123"
+  MYSQL_ROOT_PASSWORD: "VALUE_FROM_VAULT"
+  MYSQL_PASSWORD: "VALUE_FROM_VAULT"
+  WORDPRESS_DB_PASSWORD: "VALUE_FROM_VAULT"
